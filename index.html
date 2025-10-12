@@ -30,7 +30,7 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             font-size: 28px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
@@ -72,7 +72,7 @@
 
         .compass {
             text-align: center;
-            padding: 30px 0;
+            padding: 15px 0;
         }
 
         .compass-heading {
@@ -100,6 +100,7 @@
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s;
+            margin-bottom: 20px;
         }
 
         button:active {
@@ -116,7 +117,7 @@
             padding: 15px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
-            margin-top: 20px;
+            margin-bottom: 20px;
             font-size: 14px;
         }
 
@@ -136,32 +137,37 @@
     <div class="container">
         <h1>Device Orientation Demo</h1>
         
+        <button id="requestButton" onclick="requestPermission()">
+            Enable Device Orientation
+        </button>
+
+        <div class="status" id="status">
+            Ready to start. Click the button to begin.
+        </div>
+        
         <div class="card">
             <div class="orientation-data">
-                <div class="data-label">Alpha (Z-axis)</div>
+                <div class="data-label">Alpha (Z-axis, 0° to 360°)</div>
                 <div>
                     <span class="data-value" id="alpha">--</span>
                     <span class="data-unit">°</span>
                 </div>
-                <div class="info-text">Rotation around Z-axis (0° to 360°)</div>
             </div>
 
             <div class="orientation-data">
-                <div class="data-label">Beta (X-axis)</div>
+                <div class="data-label">Beta (X-axis, -180° to 180°)</div>
                 <div>
                     <span class="data-value" id="beta">--</span>
                     <span class="data-unit">°</span>
                 </div>
-                <div class="info-text">Front-to-back tilt (-180° to 180°)</div>
             </div>
 
             <div class="orientation-data">
-                <div class="data-label">Gamma (Y-axis)</div>
+                <div class="data-label">Gamma (Y-axis, -90° to 90°)</div>
                 <div>
                     <span class="data-value" id="gamma">--</span>
                     <span class="data-unit">°</span>
                 </div>
-                <div class="info-text">Left-to-right tilt (-90° to 90°)</div>
             </div>
         </div>
 
@@ -169,15 +175,6 @@
             <div class="data-label">Compass Heading</div>
             <div class="compass-heading" id="heading">--</div>
             <div class="compass-direction" id="direction">--</div>
-            <div class="info-text">Calculated using W3C worked example</div>
-        </div>
-
-        <button id="requestButton" onclick="requestPermission()">
-            Enable Device Orientation
-        </button>
-
-        <div class="status" id="status">
-            Ready to start. Click the button above.
         </div>
     </div>
 
