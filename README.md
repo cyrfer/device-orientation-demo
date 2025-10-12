@@ -2,6 +2,10 @@
 
 A web application for mobile devices that demonstrates the DeviceOrientationEvent API by displaying real-time Euler angles (alpha, beta, gamma) and calculating compass heading.
 
+## Live Demo
+
+Visit the live demo at: https://cyrfer.github.io/device-orientation-demo/
+
 ## Features
 
 - **Real-time Euler Angle Display**: Shows alpha (Z-axis), beta (X-axis), and gamma (Y-axis) values
@@ -41,6 +45,21 @@ The compass heading calculation uses the worked example from the [W3C Device Ori
 Simply open `index.html` in a web browser. For the best experience:
 - Use a physical mobile device, or
 - Use Chrome DevTools Device Mode with sensor emulation enabled
+
+## Deployment
+
+This application is automatically deployed to GitHub Pages using GitHub Actions. The workflow runs on every push to the `main` branch and can also be triggered manually from the Actions tab.
+
+The deployment workflow:
+1. Checks out the repository
+2. Configures GitHub Pages settings
+3. Uploads all files as a Pages artifact
+4. Deploys to GitHub Pages
+
+To enable GitHub Pages for your fork:
+1. Go to your repository Settings
+2. Navigate to Pages section
+3. Under "Build and deployment", select "GitHub Actions" as the source
 
 ## License
 
