@@ -248,8 +248,13 @@
             // Calculate and display compass heading
             if (alpha !== null && beta !== null && gamma !== null) {
                 const heading = compassHeading(alpha, beta, gamma);
-                document.getElementById('heading').textContent = formatValue(heading) + '°';
-                document.getElementById('direction').textContent = getCompassDirection(heading);
+                if (!isNaN(heading)) {
+                    document.getElementById('heading').textContent = formatValue(heading) + '°';
+                    document.getElementById('direction').textContent = getCompassDirection(heading);
+                } else {
+                    document.getElementById('heading').textContent = '--';
+                    document.getElementById('direction').textContent = 'Tilt device';
+                }
             }
         }
 
