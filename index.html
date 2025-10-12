@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Device Orientation Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            color: #333;
+        }
+
+        .orientation-data {
+            margin-bottom: 15px;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .data-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+            font-family: 'Courier New', monospace;
+        }
+
+        .data-unit {
+            font-size: 18px;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .compass {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .compass-heading {
+            font-size: 48px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .compass-direction {
+            font-size: 24px;
+            font-weight: 600;
+            color: #764ba2;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .error {
+            background: rgba(255, 59, 48, 0.3);
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Device Orientation Demo</h1>
+        
+        <div class="card">
+            <div class="orientation-data">
+                <div class="data-label">Alpha (Z-axis)</div>
+                <div>
+                    <span class="data-value" id="alpha">--</span>
+                    <span class="data-unit">°</span>
+                </div>
+                <div class="info-text">Rotation around Z-axis (0° to 360°)</div>
+            </div>
+
+            <div class="orientation-data">
+                <div class="data-label">Beta (X-axis)</div>
+                <div>
+                    <span class="data-value" id="beta">--</span>
+                    <span class="data-unit">°</span>
+                </div>
+                <div class="info-text">Front-to-back tilt (-180° to 180°)</div>
+            </div>
+
+            <div class="orientation-data">
+                <div class="data-label">Gamma (Y-axis)</div>
+                <div>
+                    <span class="data-value" id="gamma">--</span>
+                    <span class="data-unit">°</span>
+                </div>
+                <div class="info-text">Left-to-right tilt (-90° to 90°)</div>
+            </div>
+        </div>
+
+        <div class="card compass">
+            <div class="data-label">Compass Heading</div>
+            <div class="compass-heading" id="heading">--</div>
+            <div class="compass-direction" id="direction">--</div>
+            <div class="info-text">Calculated using W3C worked example</div>
+        </div>
+
+        <button id="requestButton" onclick="requestPermission()">
+            Enable Device Orientation
+        </button>
+
+        <div class="status" id="status">
+            Ready to start. Click the button above.
+        </div>
+    </div>
+
+    <script>
+        let permissionGranted = false;
+
+        // Format number to 1 decimal place
+        function formatValue(value) {
+            if (value === null || value === undefined) {
+                return '--';
+            }
+            return value.toFixed(1);
+        }
+
+        // Get compass direction from heading
+        function getCompassDirection(heading) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(heading / 45) % 8;
+            return directions[index];
+        }
+
+        // Calculate compass heading using the worked example from W3C specification
+        // https://www.w3.org/TR/orientation-event/#worked-example
+        function compassHeading(alpha, beta, gamma) {
+            // Convert degrees to radians
+            const alphaRad = alpha * (Math.PI / 180);
+            const betaRad = beta * (Math.PI / 180);
+            const gammaRad = gamma * (Math.PI / 180);
+
+            // Calculate equation components
+            const cA = Math.cos(alphaRad);
+            const sA = Math.sin(alphaRad);
+            const cB = Math.cos(betaRad);
+            const sB = Math.sin(betaRad);
+            const cG = Math.cos(gammaRad);
+            const sG = Math.sin(gammaRad);
+
+            // Calculate A, B, C rotation components
+            const rA = -cA * sG - sA * sB * cG;
+            const rB = -sA * sG + cA * sB * cG;
+            const rC = -cB * cG;
+
+            // Calculate compass heading
+            let compassHeading = Math.atan(rA / rB);
+
+            // Convert from half unit circle to whole unit circle
+            if (rB < 0) {
+                compassHeading += Math.PI;
+            } else if (rA < 0) {
+                compassHeading += 2 * Math.PI;
+            }
+
+            // Convert radians to degrees
+            return compassHeading * (180 / Math.PI);
+        }
+
+        // Handle device orientation event
+        function handleOrientation(event) {
+            const alpha = event.alpha;
+            const beta = event.beta;
+            const gamma = event.gamma;
+
+            // Update Euler angles display
+            document.getElementById('alpha').textContent = formatValue(alpha);
+            document.getElementById('beta').textContent = formatValue(beta);
+            document.getElementById('gamma').textContent = formatValue(gamma);
+
+            // Calculate and display compass heading
+            if (alpha !== null && beta !== null && gamma !== null) {
+                const heading = compassHeading(alpha, beta, gamma);
+                if (!isNaN(heading)) {
+                    document.getElementById('heading').textContent = formatValue(heading) + '°';
+                    document.getElementById('direction').textContent = getCompassDirection(heading);
+                } else {
+                    document.getElementById('heading').textContent = '--';
+                    document.getElementById('direction').textContent = 'Tilt device';
+                }
+            }
+        }
+
+        // Request permission (required for iOS 13+)
+        async function requestPermission() {
+            const button = document.getElementById('requestButton');
+            const status = document.getElementById('status');
+
+            try {
+                // Check if permission request is needed (iOS 13+)
+                if (typeof DeviceOrientationEvent !== 'undefined' && 
+                    typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    
+                    button.disabled = true;
+                    status.textContent = 'Requesting permission...';
+                    
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    
+                    if (permission === 'granted') {
+                        startListening();
+                    } else {
+                        status.textContent = 'Permission denied. Please allow orientation access in settings.';
+                        status.classList.add('error');
+                        button.disabled = false;
+                    }
+                } else {
+                    // For non-iOS or older iOS devices
+                    startListening();
+                }
+            } catch (error) {
+                console.error('Error requesting permission:', error);
+                status.textContent = 'Error: ' + error.message;
+                status.classList.add('error');
+                button.disabled = false;
+            }
+        }
+
+        // Start listening to device orientation
+        function startListening() {
+            const button = document.getElementById('requestButton');
+            const status = document.getElementById('status');
+
+            if (typeof DeviceOrientationEvent === 'undefined') {
+                status.textContent = 'Device orientation not supported on this device.';
+                status.classList.add('error');
+                return;
+            }
+
+            window.addEventListener('deviceorientation', handleOrientation);
+            permissionGranted = true;
+            button.style.display = 'none';
+            status.textContent = 'Listening to device orientation...';
+            status.classList.remove('error');
+        }
+
+        // Check if device orientation is supported on page load
+        window.addEventListener('load', () => {
+            const status = document.getElementById('status');
+            
+            if (typeof DeviceOrientationEvent === 'undefined') {
+                status.textContent = 'Device orientation is not supported on this device/browser.';
+                status.classList.add('error');
+                document.getElementById('requestButton').disabled = true;
+            } else if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                // Auto-start for non-iOS devices
+                status.textContent = 'Click the button to start monitoring device orientation.';
+            }
+        });
+    </script>
+</body>
+</html>
