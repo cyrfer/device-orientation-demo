@@ -175,11 +175,19 @@
             <div class="data-label">Compass Heading</div>
             <div class="compass-heading" id="heading">--</div>
             <div class="compass-direction" id="direction">--</div>
+            
+            <div style="margin-top: 15px;">
+                <label style="display: flex; align-items: center; font-size: 14px; color: #666; cursor: pointer;">
+                    <input type="checkbox" id="normalizeToggle" checked style="margin-right: 8px;">
+                    Use -180° to +180° range
+                </label>
+            </div>
         </div>
     </div>
 
     <script>
         let permissionGranted = false;
+        let normalizeHeading = true; // Default to normalized range
 
         // Format number to 1 decimal place
         function formatValue(value) {
@@ -246,7 +254,12 @@
             if (alpha !== null && beta !== null && gamma !== null) {
                 const heading = compassHeading(alpha, beta, gamma);
                 if (!isNaN(heading)) {
-                    document.getElementById('heading').textContent = formatValue(heading) + '°';
+                    // Apply normalization if toggle is enabled
+                    let displayHeading = heading;
+                    if (normalizeHeading && heading > 180) {
+                        displayHeading = heading - 360;
+                    }
+                    document.getElementById('heading').textContent = formatValue(displayHeading) + '°';
                     document.getElementById('direction').textContent = getCompassDirection(heading);
                 } else {
                     document.getElementById('heading').textContent = '--';
@@ -319,6 +332,11 @@
                 // Auto-start for non-iOS devices
                 status.textContent = 'Click the button to start monitoring device orientation.';
             }
+
+            // Add toggle event listener
+            document.getElementById('normalizeToggle').addEventListener('change', (event) => {
+                normalizeHeading = event.target.checked;
+            });
         });
     </script>
 </body>
