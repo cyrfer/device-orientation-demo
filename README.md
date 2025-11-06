@@ -9,7 +9,7 @@ Visit the live demo at: https://cyrfer.github.io/device-orientation-demo/
 ## Features
 
 - **Real-time Euler Angle Display**: Shows alpha (Z-axis), beta (X-axis), and gamma (Y-axis) values
-- **Compass Heading Calculation**: Implements the [W3C worked example](https://www.w3.org/TR/orientation-event/#worked-example) to calculate true compass heading
+- **Compass Heading Calculation & Normalization Toggle**: Implements the [W3C worked example](https://www.w3.org/TR/orientation-event/#worked-example) to calculate true compass heading, with an option to display heading in either 0°–360° or normalized -180°–+180° range
 - **Mobile-Friendly Interface**: Responsive design optimized for mobile devices
 - **iOS 13+ Permission Handling**: Properly requests device orientation permissions on iOS devices
 - **Visual Feedback**: Clean, modern UI with real-time updates
@@ -24,6 +24,7 @@ Visit the live demo at: https://cyrfer.github.io/device-orientation-demo/
    - Beta: Front-to-back tilt (-180° to 180°)
    - Gamma: Left-to-right tilt (-90° to 90°)
    - Compass Heading: Calculated direction in degrees and cardinal direction (N, NE, E, SE, S, SW, W, NW)
+   - **Heading Range Toggle**: Use the checkbox to switch between 0°–360° and -180°–+180° display for compass heading. The normalized range is useful for applications needing signed heading values.
 
 ## Browser Compatibility
 
@@ -39,6 +40,9 @@ The compass heading calculation uses the worked example from the [W3C Device Ori
 2. Calculating rotation matrix components
 3. Using arctangent to determine heading
 4. Normalizing to 0-360 degrees
+
+### Heading Normalization Feature
+The app includes a toggle to display compass heading in either the standard 0°–360° range or a normalized -180°–+180° range. When enabled, headings greater than 180° are shown as negative values (e.g., 270° becomes -90°). This is useful for applications that require signed heading values for easier interpretation of left/right orientation.
 
 ## Local Testing
 
