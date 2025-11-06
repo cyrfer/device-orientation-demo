@@ -1,0 +1,29 @@
+{
+  "name": "device-orientation-demo",
+  "version": "1.0.0",
+  "description": "A web application for mobile devices that demonstrates the DeviceOrientationEvent API by displaying real-time Euler angles and calculating compass heading",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "device-orientation",
+    "compass",
+    "mobile",
+    "typescript",
+    "vite"
+  ],
+  "author": "cyrfer",
+  "license": "MIT",
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
