@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  base: '/device-orientation-demo/',
   root: '.',
   build: {
     outDir: 'dist',
