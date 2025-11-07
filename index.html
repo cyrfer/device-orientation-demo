@@ -145,46 +145,39 @@
             Ready to start. Click the button to begin.
         </div>
         
-        <div class="card">
-            <div class="orientation-data">
-                <div class="data-label">Alpha (Z-axis, 0° to 360°)</div>
-                <div>
-                    <span class="data-value" id="alpha">--</span>
-                    <span class="data-unit">°</span>
-                </div>
-            </div>
-
-            <div class="orientation-data">
-                <div class="data-label">Beta (X-axis, -180° to 180°)</div>
-                <div>
-                    <span class="data-value" id="beta">--</span>
-                    <span class="data-unit">°</span>
-                </div>
-            </div>
-
-            <div class="orientation-data">
-                <div class="data-label">Gamma (Y-axis, -90° to 90°)</div>
-                <div>
-                    <span class="data-value" id="gamma">--</span>
-                    <span class="data-unit">°</span>
-                </div>
-            </div>
-        </div>
-
+        <!-- Main outputs: Heading, Elevation, Roll -->
         <div class="card compass">
             <div class="data-label">Compass Heading</div>
             <div class="compass-heading" id="heading">--</div>
             <div class="compass-direction" id="direction">--</div>
-            
-            <div style="margin-top: 15px;">
-                <label style="display: flex; align-items: center; font-size: 14px; color: #666; cursor: pointer;">
-                    <input type="checkbox" id="normalizeToggle" checked style="margin-right: 8px;">
-                    Use -180° to +180° range
-                </label>
-                <label style="display: flex; align-items: center; font-size: 14px; color: #666; cursor: pointer; margin-top: 8px;">
-                    <input type="checkbox" id="linearAlgebraToggle" checked style="margin-right: 8px;">
-                    Use Linear Algebra Implementation
-                </label>
+        </div>
+
+        <div class="card compass">
+            <div class="data-label">Elevation</div>
+            <div class="compass-heading" id="elevation">--</div>
+        </div>
+
+        <div class="card compass">
+            <div class="data-label">Roll</div>
+            <div class="compass-heading" id="roll">--</div>
+        </div>
+
+        <!-- Raw device orientation values (smaller) -->
+        <div class="card raw-data">
+            <div class="data-label" style="font-size: 12px; margin-bottom: 10px;">Raw Device Orientation</div>
+            <div style="display: flex; justify-content: space-around; font-size: 12px;">
+                <div>
+                    <div style="color: #999; font-size: 10px;">Alpha</div>
+                    <div><span id="alpha">--</span>°</div>
+                </div>
+                <div>
+                    <div style="color: #999; font-size: 10px;">Beta</div>
+                    <div><span id="beta">--</span>°</div>
+                </div>
+                <div>
+                    <div style="color: #999; font-size: 10px;">Gamma</div>
+                    <div><span id="gamma">--</span>°</div>
+                </div>
             </div>
         </div>
     </div>
