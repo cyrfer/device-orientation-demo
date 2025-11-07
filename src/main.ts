@@ -1,5 +1,9 @@
+import { VisualizationScene } from './visualization';
+import { Vector3, Matrix3x3 } from './mathTypes';
+
 // State variables
-let permissionGranted = false;
+let rawScene: VisualizationScene | null = null;
+let extractedScene: VisualizationScene | null = null;
 
 // DOM element references
 const alphaElement = document.getElementById('alpha')!;
@@ -10,7 +14,8 @@ const elevationElement = document.getElementById('elevation')!;
 const rollElement = document.getElementById('roll')!;
 const directionElement = document.getElementById('direction')!;
 const requestButton = document.getElementById('requestButton')!;
-const statusElement = document.getElementById('status')!
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
 
 // Format number to 1 decimal place
 function formatValue(value: number | null): string {
@@ -36,10 +41,6 @@ function normalizeHeadingRange(heading: number): number {
     }
     return heading;
 }
-
-// Type definitions for linear algebra
-type Vector3 = [number, number, number];
-type Matrix3x3 = [Vector3, Vector3, Vector3];
 
 // Dot product: takes two vectors and returns the sum of component-wise multiplication
 function dotProduct(v1: Vector3, v2: Vector3): number {
@@ -74,23 +75,6 @@ function buildRotationMatrix(alphaRad: number, betaRad: number, gammaRad: number
         [cG*sA + cA*sB*sG,   cA*cB,        sA*sG - cA*cG*sB],
         [-cB*sG,             sB,            cB*cG          ],
     ];
-}
-
-// Fallback implementation using the original W3C worked example approach
-// Input: Euler angles in radians
-// Output: Transformed vector components as [x, y, z]
-function compassHeadingFallback(alphaRad: number, betaRad: number, gammaRad: number): Vector3 {
-    const cA = Math.cos(alphaRad);
-    const sA = Math.sin(alphaRad);
-    const sB = Math.sin(betaRad);
-    const cG = Math.cos(gammaRad);
-    const sG = Math.sin(gammaRad);
-
-    // Calculate transformed vector components directly from the W3C worked example
-    const rA = -cA * sG - sA * sB * cG;
-    const rB = -sA * sG + cA * sB * cG;
-
-    return [rA, rB, 0]; // Third component not used in heading calculation
 }
 
 // Calculate orientation angles (heading, elevation, roll) from transformed vectors
@@ -130,6 +114,68 @@ function calculateOrientationAngles(northVector: Vector3, eastVector: Vector3): 
     const roll = Math.atan2(-rollZ, rollHorizontalDist) * (180 / Math.PI);
 
     return {heading, elevation, roll};
+}
+
+// Build rotation matrix from extracted angles (roll, elevation, heading)
+// Order: R = R(roll) * R(elevation) * R(heading)
+// This constructs a rotation matrix from the extracted angles to compare with the raw device matrix
+function buildRotationMatrixFromAngles(heading: number, elevation: number, roll: number): Matrix3x3 {
+    // Convert degrees to radians
+    const h = heading * (Math.PI / 180);
+    const e = elevation * (Math.PI / 180);
+    const r = roll * (Math.PI / 180);
+
+    // Heading rotation (around Z-axis)
+    const ch = Math.cos(h);
+    const sh = Math.sin(h);
+    const Rh: Matrix3x3 = [
+        [ch, -sh, 0],
+        [sh, ch, 0],
+        [0, 0, 1]
+    ];
+
+    // Elevation rotation (around Y-axis)
+    const ce = Math.cos(e);
+    const se = Math.sin(e);
+    const Re: Matrix3x3 = [
+        [ce, 0, se],
+        [0, 1, 0],
+        [-se, 0, ce]
+    ];
+
+    // Roll rotation (around X-axis)
+    const cr = Math.cos(r);
+    const sr = Math.sin(r);
+    const Rr: Matrix3x3 = [
+        [1, 0, 0],
+        [0, cr, -sr],
+        [0, sr, cr]
+    ];
+
+    // Multiply matrices: R = Rr * Re * Rh
+    // First multiply Re * Rh
+    const ReRh: Matrix3x3 = multiplyMatrices(Re, Rh);
+    // Then multiply Rr * (Re * Rh)
+    const R: Matrix3x3 = multiplyMatrices(Rr, ReRh);
+
+    return R;
+}
+
+// Matrix multiplication: result = A × B
+function multiplyMatrices(A: Matrix3x3, B: Matrix3x3): Matrix3x3 {
+    const result: Matrix3x3 = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ];
+
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            result[i][j] = A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j];
+        }
+    }
+
+    return result;
 }
 
 // Handle device orientation event
@@ -182,6 +228,16 @@ function handleOrientation(event: DeviceOrientationEvent): void {
         } else {
             rollElement.textContent = '--';
         }
+
+        // Update 3D visualizations if they exist
+        if (rawScene && extractedScene) {
+            // Update raw device matrix scene
+            rawScene.updateRotation(R);
+
+            // Build rotation matrix from extracted angles and update extracted angles scene
+            const extractedMatrix = buildRotationMatrixFromAngles(angles.heading, angles.elevation, angles.roll);
+            extractedScene.updateRotation(extractedMatrix);
+        }
     }
 }
 
@@ -194,15 +250,14 @@ async function requestPermission(): Promise<void> {
             typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
             
             requestButton.setAttribute('disabled', 'true');
-            statusElement.textContent = 'Requesting permission...';
+            requestButton.textContent = 'Requesting permission...';
             
             const permission = await (DeviceOrientationEvent as any).requestPermission();
             
             if (permission === 'granted') {
                 startListening();
             } else {
-                statusElement.textContent = 'Permission denied. Please allow orientation access in settings.';
-                statusElement.classList.add('error');
+                requestButton.textContent = 'Permission Denied - Enable in Settings';
                 requestButton.removeAttribute('disabled');
             }
         } else {
@@ -211,8 +266,7 @@ async function requestPermission(): Promise<void> {
         }
     } catch (error) {
         console.error('Error requesting permission:', error);
-        statusElement.textContent = 'Error: ' + (error as Error).message;
-        statusElement.classList.add('error');
+        requestButton.textContent = 'Error - Try Again';
         requestButton.removeAttribute('disabled');
     }
 }
@@ -220,31 +274,84 @@ async function requestPermission(): Promise<void> {
 // Start listening to device orientation
 function startListening(): void {
     if (typeof DeviceOrientationEvent === 'undefined') {
-        statusElement.textContent = 'Device orientation not supported on this device.';
-        statusElement.classList.add('error');
+        requestButton.textContent = 'Device Orientation Not Supported';
         return;
     }
 
     window.addEventListener('deviceorientation', handleOrientation);
-    permissionGranted = true;
     requestButton.style.display = 'none';
-    statusElement.textContent = 'Listening to device orientation...';
-    statusElement.classList.remove('error');
+}
+
+// Initialize 3D scenes
+function initialize3DScenes(): void {
+    const rawCanvas = document.getElementById('canvas-raw') as HTMLCanvasElement;
+    const extractedCanvas = document.getElementById('canvas-extracted') as HTMLCanvasElement;
+
+    if (rawCanvas && extractedCanvas) {
+        rawScene = new VisualizationScene(rawCanvas);
+        extractedScene = new VisualizationScene(extractedCanvas);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            rawScene?.resize();
+            extractedScene?.resize();
+        });
+    }
+}
+
+// Handle tab switching
+function switchTab(tabName: string): void {
+    // Update tab buttons
+    tabButtons.forEach(button => {
+        if (button.getAttribute('data-tab') === tabName) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+
+    // Update tab contents
+    tabContents.forEach(content => {
+        if (content.id === `tab-${tabName}`) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+
+    // Initialize 3D scenes when visualization tab is first opened
+    if (tabName === 'visualization' && !rawScene && !extractedScene) {
+        initialize3DScenes();
+    }
+
+    // Trigger resize when switching to visualization tab
+    if (tabName === 'visualization') {
+        setTimeout(() => {
+            rawScene?.resize();
+            extractedScene?.resize();
+        }, 100);
+    }
 }
 
 // Check if device orientation is supported on page load
 function initializeApp(): void {
     if (typeof DeviceOrientationEvent === 'undefined') {
-        statusElement.textContent = 'Device orientation is not supported on this device/browser.';
-        statusElement.classList.add('error');
+        requestButton.textContent = 'Device Orientation Not Supported';
         requestButton.setAttribute('disabled', 'true');
-    } else if (!('requestPermission' in DeviceOrientationEvent)) {
-        // Auto-start for non-iOS devices
-        statusElement.textContent = 'Click the button to start monitoring device orientation.';
     }
 
     // Add event listeners
     requestButton.addEventListener('click', requestPermission);
+
+    // Add tab switching event listeners
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+            if (tabName) {
+                switchTab(tabName);
+            }
+        });
+    });
 }
 
 // Initialize the app when DOM is loaded
