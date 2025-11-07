@@ -11,7 +11,13 @@ Visit the live demo at: https://cyrfer.github.io/device-orientation-demo/
 - **TypeScript Implementation**: Type-safe codebase with modern JavaScript features
 - **Vite Development Environment**: Fast development server with hot module replacement
 - **Real-time Euler Angle Display**: Shows alpha (Z-axis), beta (X-axis), and gamma (Y-axis) values
-- **Compass Heading Calculation & Normalization Toggle**: Implements the [W3C worked example](https://www.w3.org/TR/orientation-event/#worked-example) to calculate true compass heading, with an option to display heading in either 0°–360° or normalized -180°–+180° range
+- **Compass Heading Calculation**: Implements the [W3C worked example](https://www.w3.org/TR/orientation-event/#worked-example) to calculate true compass heading, elevation, and roll angles
+- **3D Visualization**: Interactive Three.js visualization showing how rotation matrices transform geometry
+  - **Data Tab**: Traditional display of orientation angles and heading
+  - **3D View Tab**: Side-by-side comparison of two rotation methods:
+    - Left viewport: Geometry rotated using the raw device orientation matrix
+    - Right viewport: Geometry rotated using a matrix reconstructed from extracted angles (heading, elevation, roll)
+  - **Responsive Layout**: Viewports display side-by-side in landscape mode, stacked vertically in portrait mode
 - **Mobile-Friendly Interface**: Responsive design optimized for mobile devices
 - **iOS 13+ Permission Handling**: Properly requests device orientation permissions on iOS devices
 - **Visual Feedback**: Clean, modern UI with real-time updates
@@ -64,12 +70,16 @@ npm run type-check
 1. Start the development server with `npm run dev` or open `index.html` directly in a mobile device browser
 2. Click "Enable Device Orientation" button
 3. Grant permission when prompted (iOS devices)
-4. The app will display:
-   - Alpha: Rotation around Z-axis (0° to 360°)
-   - Beta: Front-to-back tilt (-180° to 180°)
-   - Gamma: Left-to-right tilt (-90° to 90°)
+4. **Data Tab** displays:
    - Compass Heading: Calculated direction in degrees and cardinal direction (N, NE, E, SE, S, SW, W, NW)
-   - **Heading Range Toggle**: Use the checkbox to switch between 0°–360° and -180°–+180° display for compass heading. The normalized range is useful for applications needing signed heading values.
+   - Elevation: Pitch angle (-90° to +90°)
+   - Roll: Bank angle (-180° to +180°)
+   - Raw device orientation values (Alpha, Beta, Gamma)
+5. **3D View Tab** shows:
+   - Two synchronized 3D viewports with a colored cube and axis arrows (X=red, Y=green, Z=blue)
+   - Left viewport: Rotated using the raw device orientation rotation matrix
+   - Right viewport: Rotated using a matrix built from extracted angles (R = R(roll) × R(elevation) × R(heading))
+   - Compare both visualizations to verify that the angle extraction preserves the rotation accurately across Android and iOS
 
 ## Browser Compatibility
 
@@ -86,18 +96,25 @@ The compass heading calculation uses the worked example from the [W3C Device Ori
 3. Using arctangent to determine heading
 4. Normalizing to 0-360 degrees
 
-### Heading Normalization Feature
-The app includes a toggle to display compass heading in either the standard 0°–360° range or a normalized -180°–+180° range. When enabled, headings greater than 180° are shown as negative values (e.g., 270° becomes -90°). This is useful for applications that require signed heading values for easier interpretation of left/right orientation.
+### 3D Visualization Details
+The 3D visualization demonstrates platform unification by showing that despite different raw sensor values on Android and iOS:
+- The raw device orientation matrix produces a specific rotation
+- Extracting angles (heading, elevation, roll) from transformed vectors
+- Reconstructing a rotation matrix from those angles (R = R(roll) × R(elevation) × R(heading))
+- Both matrices produce visually identical rotations, confirming the mathematical consistency
+
+This allows developers to verify cross-platform behavior by viewing both devices side-by-side and confirming the 3D visualizations match.
 
 ## Project Structure
 
 ```
 ├── src/
-│   └── main.ts          # TypeScript source code
-├── index.html           # Main HTML file
-├── package.json         # Node.js dependencies and scripts
-├── tsconfig.json        # TypeScript configuration
-├── vite.config.ts       # Vite configuration
+│   ├── main.ts              # TypeScript main logic and orientation handling
+│   └── visualization.ts     # Three.js 3D visualization scenes
+├── index.html               # Main HTML file with tab interface
+├── package.json             # Node.js dependencies and scripts
+├── tsconfig.json            # TypeScript configuration
+├── vite.config.ts           # Vite configuration
 └── README.md           # This file
 ```
 
