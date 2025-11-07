@@ -1,18 +1,16 @@
 // State variables
 let permissionGranted = false;
-let normalizeHeading = true; // Default to normalized range
-let useLinearAlgebra = true; // Use linear algebra implementation (true) or fallback (false)
 
 // DOM element references
 const alphaElement = document.getElementById('alpha')!;
 const betaElement = document.getElementById('beta')!;
 const gammaElement = document.getElementById('gamma')!;
 const headingElement = document.getElementById('heading')!;
+const elevationElement = document.getElementById('elevation')!;
+const rollElement = document.getElementById('roll')!;
 const directionElement = document.getElementById('direction')!;
 const requestButton = document.getElementById('requestButton')!;
-const statusElement = document.getElementById('status')!;
-const normalizeToggle = document.getElementById('normalizeToggle') as HTMLInputElement;
-const linearAlgebraToggle = document.getElementById('linearAlgebraToggle') as HTMLInputElement;
+const statusElement = document.getElementById('status')!
 
 // Format number to 1 decimal place
 function formatValue(value: number | null): string {
@@ -27,6 +25,16 @@ function getCompassDirection(heading: number): string {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     const index = Math.round(heading / 45) % 8;
     return directions[index];
+}
+
+// Normalize heading to [-180, +180] range
+// Converts heading from 0-360° to -180° to +180° range
+function normalizeHeadingRange(heading: number): number {
+    // Convert from 0-360 to -180 to +180
+    if (heading > 180) {
+        heading -= 360;
+    }
+    return heading;
 }
 
 // Type definitions for linear algebra
@@ -85,52 +93,43 @@ function compassHeadingFallback(alphaRad: number, betaRad: number, gammaRad: num
     return [rA, rB, 0]; // Third component not used in heading calculation
 }
 
-// New implementation using explicit linear algebra
-// Input: Euler angles in radians
-// Output: Transformed vector components as [x, y, z]
-function compassHeadingLinearAlgebra(alphaRad: number, betaRad: number, gammaRad: number): Vector3 {
-    // Build the rotation matrix
-    const R = buildRotationMatrix(alphaRad, betaRad, gammaRad);
-
-    // Input vector: magnetic north in device coordinates
-    // Using [0, 0, -1] based on W3C equation5e.png showing negation of third column
-    const v: Vector3 = [0, 0, -1];
-
-    // Transform the vector: v' = R × v
-    const vPrime = multiplyMatrixVector(R, v);
-
-    return vPrime;
-}
-
-// Calculate compass heading from transformed vector components
-// Uses atan2 for proper quadrant handling
-function getHeadingFromVector(transformedVector: Vector3): number {
-    const x = transformedVector[0];
-    const y = transformedVector[1];
-
-    // Calculate heading using atan2 for proper angle calculation across all quadrants
-    let heading = Math.atan2(x, y) * (180 / Math.PI);
-
-    // Normalize to 0-360 range
+// Calculate orientation angles (heading, elevation, roll) from transformed vectors
+// This unified function ensures all three angles are interdependent and maintain proper ranges:
+// - heading: 0-360° (compass direction)
+// - elevation: -90° to +90° (pitch, angle from horizontal)
+// - roll: -180° to +180° (bank, rotation around forward axis)
+// 
+// Input:
+//   - northVector: transformed north vector [0, 0, -1] from rotation matrix
+//   - eastVector: transformed east vector [1, 0, 0] from rotation matrix
+// 
+// Output: {heading, elevation, roll}
+function calculateOrientationAngles(northVector: Vector3, eastVector: Vector3): {heading: number, elevation: number, roll: number} {
+    // === HEADING (from north vector) ===
+    // Project north vector onto horizontal plane (x-y plane)
+    // Heading = atan2(x, y) gives compass direction
+    const headingX = northVector[0];
+    const headingY = northVector[1];
+    let heading = Math.atan2(headingX, headingY) * (180 / Math.PI);
     if (heading < 0) {
         heading += 360;
     }
 
-    return heading;
-}
+    // === ELEVATION (from north vector) ===
+    // Elevation is the angle from the horizontal plane
+    // Use the magnitude of horizontal components as the "adjacent" side
+    const elevationZ = northVector[2];
+    const horizontalDist = Math.sqrt(northVector[0] ** 2 + northVector[1] ** 2);
+    const elevation = Math.atan2(elevationZ, horizontalDist) * (180 / Math.PI);
 
-// Main compass heading calculation function
-// Uses the selected implementation (linear algebra or fallback)
-function compassHeading(alpha: number, beta: number, gamma: number): number {
-    // Convert degrees to radians once
-    const alphaRad = alpha * (Math.PI / 180);
-    const betaRad = beta * (Math.PI / 180);
-    const gammaRad = gamma * (Math.PI / 180);
+    // === ROLL (from east vector) ===
+    // Roll is the bank angle around the forward axis (pitch axis)
+    // The horizontal distance of the east vector tells us the bank angle
+    const rollZ = eastVector[2];
+    const rollHorizontalDist = Math.sqrt(eastVector[0] ** 2 + eastVector[1] ** 2);
+    const roll = Math.atan2(-rollZ, rollHorizontalDist) * (180 / Math.PI);
 
-    const transformedVector = useLinearAlgebra
-        ? compassHeadingLinearAlgebra(alphaRad, betaRad, gammaRad)
-        : compassHeadingFallback(alphaRad, betaRad, gammaRad);
-    return getHeadingFromVector(transformedVector);
+    return {heading, elevation, roll};
 }
 
 // Handle device orientation event
@@ -144,20 +143,44 @@ function handleOrientation(event: DeviceOrientationEvent): void {
     betaElement.textContent = formatValue(beta);
     gammaElement.textContent = formatValue(gamma);
 
-    // Calculate and display compass heading
+    // Calculate and display heading, elevation, and roll
     if (alpha !== null && beta !== null && gamma !== null) {
-        const heading = compassHeading(alpha, beta, gamma);
-        if (!isNaN(heading)) {
-            // Apply normalization if toggle is enabled
-            let displayHeading = heading;
-            if (normalizeHeading && heading > 180) {
-                displayHeading = heading - 360;
-            }
-            headingElement.textContent = formatValue(displayHeading) + '°';
-            directionElement.textContent = getCompassDirection(heading);
+        // Convert degrees to radians once
+        const alphaRad = alpha * (Math.PI / 180);
+        const betaRad = beta * (Math.PI / 180);
+        const gammaRad = gamma * (Math.PI / 180);
+
+        // Build rotation matrix once
+        const R = buildRotationMatrix(alphaRad, betaRad, gammaRad);
+
+        // Transform vectors once
+        const northVector = multiplyMatrixVector(R, [0, 0, -1]);
+        const eastVector = multiplyMatrixVector(R, [1, 0, 0]);
+
+        // Calculate angles from transformed vectors using unified function
+        const angles = calculateOrientationAngles(northVector, eastVector);
+        
+        // Normalize heading to [-180, +180] range
+        const normalizedHeading = normalizeHeadingRange(angles.heading);
+        
+        if (!isNaN(normalizedHeading)) {
+            headingElement.textContent = formatValue(normalizedHeading) + '°';
+            directionElement.textContent = getCompassDirection(angles.heading);
         } else {
             headingElement.textContent = '--';
             directionElement.textContent = 'Tilt device';
+        }
+        
+        if (!isNaN(angles.elevation)) {
+            elevationElement.textContent = formatValue(angles.elevation) + '°';
+        } else {
+            elevationElement.textContent = '--';
+        }
+        
+        if (!isNaN(angles.roll)) {
+            rollElement.textContent = formatValue(angles.roll) + '°';
+        } else {
+            rollElement.textContent = '--';
         }
     }
 }
@@ -222,12 +245,6 @@ function initializeApp(): void {
 
     // Add event listeners
     requestButton.addEventListener('click', requestPermission);
-    normalizeToggle.addEventListener('change', (event) => {
-        normalizeHeading = (event.target as HTMLInputElement).checked;
-    });
-    linearAlgebraToggle.addEventListener('change', (event) => {
-        useLinearAlgebra = (event.target as HTMLInputElement).checked;
-    });
 }
 
 // Initialize the app when DOM is loaded
