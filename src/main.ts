@@ -1,5 +1,5 @@
 import { VisualizationScene } from './visualization';
-import { Vector3, multiplyMatrixVector, buildRotationMatrix, buildRotationMatrixFromAngles } from './mathTypes';
+import { multiplyMatrixVector, buildRotationMatrix, buildRotationMatrixFromAngles, Matrix3x3 } from './mathTypes';
 
 // State variables
 let deviceScene: VisualizationScene | null = null;
@@ -42,6 +42,13 @@ function normalizeHeadingRange(heading: number): number {
     return heading;
 }
 
+interface OrientationData {
+    normalizedHeading: number
+    heading: number
+    elevation: number
+    roll: number
+}
+
 // Calculate orientation angles (heading, elevation, roll) from transformed vectors
 // This unified function ensures all three angles are interdependent and maintain proper ranges:
 // - heading: 0-360° (compass direction)
@@ -49,11 +56,26 @@ function normalizeHeadingRange(heading: number): number {
 // - roll: -180° to +180° (bank, rotation around forward axis)
 // 
 // Input:
-//   - northVector: transformed north vector [0, 0, -1] from rotation matrix
-//   - eastVector: transformed east vector [1, 0, 0] from rotation matrix
+//   - event: DeviceOrientationEvent
 // 
-// Output: {heading, elevation, roll}
-function calculateOrientationAngles(northVector: Vector3, eastVector: Vector3): {heading: number, elevation: number, roll: number} {
+// Output: {extracted: {heading, elevation, roll}, R, extractedMatrix}
+function calculateOrientationAngles(event: DeviceOrientationEvent): {extracted: OrientationData, R: Matrix3x3, extractedMatrix: Matrix3x3} {
+    const alpha = event.alpha ?? 0;
+    const beta = event.beta ?? 0;
+    const gamma = event.gamma ?? 0;
+
+    // Convert degrees to radians once
+    const alphaRad = alpha * (Math.PI / 180);
+    const betaRad = beta * (Math.PI / 180);
+    const gammaRad = gamma * (Math.PI / 180);
+
+    // Build rotation matrix once
+    const R = buildRotationMatrix(alphaRad, betaRad, gammaRad);
+
+    // Transform vectors once
+    const northVector = multiplyMatrixVector(R, [0, 0, -1]);
+    const eastVector = multiplyMatrixVector(R, [1, 0, 0]);
+
     // === HEADING (from north vector) ===
     // Project north vector onto horizontal plane (x-y plane)
     // Heading = atan2(x, y) gives compass direction
@@ -78,7 +100,15 @@ function calculateOrientationAngles(northVector: Vector3, eastVector: Vector3): 
     const rollHorizontalDist = Math.sqrt(eastVector[0] ** 2 + eastVector[1] ** 2);
     const roll = Math.atan2(-rollZ, rollHorizontalDist) * (180 / Math.PI);
 
-    return {heading, elevation, roll};
+    // Normalize heading to [-180, +180] range
+    const normalizedHeading = normalizeHeadingRange(heading);
+    const extractedMatrix = buildRotationMatrixFromAngles(heading, elevation, roll);
+
+    return {
+        extracted: {heading, elevation, roll, normalizedHeading},
+        R,
+        extractedMatrix,
+    }
 }
 
 // Handle device orientation event
@@ -92,55 +122,36 @@ function handleOrientation(event: DeviceOrientationEvent): void {
     betaElement.textContent = formatValue(beta);
     gammaElement.textContent = formatValue(gamma);
 
-    // Calculate and display heading, elevation, and roll
-    if (alpha !== null && beta !== null && gamma !== null) {
-        // Convert degrees to radians once
-        const alphaRad = alpha * (Math.PI / 180);
-        const betaRad = beta * (Math.PI / 180);
-        const gammaRad = gamma * (Math.PI / 180);
+    // Calculate angles from transformed vectors using unified function
+    const {extracted: angles, R, extractedMatrix} = calculateOrientationAngles(event);
 
-        // Build rotation matrix once
-        const R = buildRotationMatrix(alphaRad, betaRad, gammaRad);
+    if (!isNaN(angles.normalizedHeading)) {
+        headingElement.textContent = formatValue(angles.normalizedHeading) + '°';
+        directionElement.textContent = getCompassDirection(angles.heading);
+    } else {
+        headingElement.textContent = '--';
+        directionElement.textContent = 'Tilt device';
+    }
+    
+    if (!isNaN(angles.elevation)) {
+        elevationElement.textContent = formatValue(angles.elevation) + '°';
+    } else {
+        elevationElement.textContent = '--';
+    }
+    
+    if (!isNaN(angles.roll)) {
+        rollElement.textContent = formatValue(angles.roll) + '°';
+    } else {
+        rollElement.textContent = '--';
+    }
 
-        // Transform vectors once
-        const northVector = multiplyMatrixVector(R, [0, 0, -1]);
-        const eastVector = multiplyMatrixVector(R, [1, 0, 0]);
+    // Update 3D visualizations if they exist
+    if (deviceScene && extractedScene) {
+        // Update raw device matrix scene
+        deviceScene.updateRotation(R);
 
-        // Calculate angles from transformed vectors using unified function
-        const angles = calculateOrientationAngles(northVector, eastVector);
-        
-        // Normalize heading to [-180, +180] range
-        const normalizedHeading = normalizeHeadingRange(angles.heading);
-        
-        if (!isNaN(normalizedHeading)) {
-            headingElement.textContent = formatValue(normalizedHeading) + '°';
-            directionElement.textContent = getCompassDirection(angles.heading);
-        } else {
-            headingElement.textContent = '--';
-            directionElement.textContent = 'Tilt device';
-        }
-        
-        if (!isNaN(angles.elevation)) {
-            elevationElement.textContent = formatValue(angles.elevation) + '°';
-        } else {
-            elevationElement.textContent = '--';
-        }
-        
-        if (!isNaN(angles.roll)) {
-            rollElement.textContent = formatValue(angles.roll) + '°';
-        } else {
-            rollElement.textContent = '--';
-        }
-
-        // Update 3D visualizations if they exist
-        if (deviceScene && extractedScene) {
-            // Update raw device matrix scene
-            deviceScene.updateRotation(R);
-
-            // Build rotation matrix from extracted angles and update extracted angles scene
-            const extractedMatrix = buildRotationMatrixFromAngles(angles.heading, angles.elevation, angles.roll);
-            extractedScene.updateRotation(extractedMatrix);
-        }
+        // Build rotation matrix from extracted angles and update extracted angles scene
+        extractedScene.updateRotation(extractedMatrix);
     }
 }
 
