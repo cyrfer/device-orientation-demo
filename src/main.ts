@@ -1,8 +1,8 @@
 import { VisualizationScene } from './visualization';
-import { Vector3, Matrix3x3, multiplyMatrices, multiplyMatrixVector } from './mathTypes';
+import { Vector3, multiplyMatrixVector, buildRotationMatrix, buildRotationMatrixFromAngles } from './mathTypes';
 
 // State variables
-let rawScene: VisualizationScene | null = null;
+let deviceScene: VisualizationScene | null = null;
 let extractedScene: VisualizationScene | null = null;
 
 // DOM element references
@@ -42,26 +42,6 @@ function normalizeHeadingRange(heading: number): number {
     return heading;
 }
 
-// Build the rotation matrix from Euler angles (alpha, beta, gamma)
-// Based on the W3C Device Orientation Event specification
-// https://www.w3.org/TR/orientation-event/#worked-example
-// https://www.w3.org/TR/orientation-event/equation13a.png
-function buildRotationMatrix(alphaRad: number, betaRad: number, gammaRad: number): Matrix3x3 {
-    const cA = Math.cos(alphaRad);
-    const sA = Math.sin(alphaRad);
-    const cB = Math.cos(betaRad);
-    const sB = Math.sin(betaRad);
-    const cG = Math.cos(gammaRad);
-    const sG = Math.sin(gammaRad);
-
-    // Full rotation matrix R from equation13a.png
-    return [
-        [cA*cG - sA*sB*sG,  -cB*sA,        cG*sA*sB + cA*sG],
-        [cG*sA + cA*sB*sG,   cA*cB,        sA*sG - cA*cG*sB],
-        [-cB*sG,             sB,            cB*cG          ],
-    ];
-}
-
 // Calculate orientation angles (heading, elevation, roll) from transformed vectors
 // This unified function ensures all three angles are interdependent and maintain proper ranges:
 // - heading: 0-360° (compass direction)
@@ -99,51 +79,6 @@ function calculateOrientationAngles(northVector: Vector3, eastVector: Vector3): 
     const roll = Math.atan2(-rollZ, rollHorizontalDist) * (180 / Math.PI);
 
     return {heading, elevation, roll};
-}
-
-// Build rotation matrix from extracted angles (roll, elevation, heading)
-// Order: R = R(roll) * R(elevation) * R(heading)
-// This constructs a rotation matrix from the extracted angles to compare with the raw device matrix
-function buildRotationMatrixFromAngles(heading: number, elevation: number, roll: number): Matrix3x3 {
-    // Convert degrees to radians
-    const h = heading * (Math.PI / 180);
-    const e = elevation * (Math.PI / 180);
-    const r = roll * (Math.PI / 180);
-
-    // Heading rotation (around Z-axis)
-    const ch = Math.cos(h);
-    const sh = Math.sin(h);
-    const Rh: Matrix3x3 = [
-        [ch, -sh, 0],
-        [sh, ch, 0],
-        [0, 0, 1]
-    ];
-
-    // Elevation rotation (around Y-axis)
-    const ce = Math.cos(e);
-    const se = Math.sin(e);
-    const Re: Matrix3x3 = [
-        [ce, 0, se],
-        [0, 1, 0],
-        [-se, 0, ce]
-    ];
-
-    // Roll rotation (around X-axis)
-    const cr = Math.cos(r);
-    const sr = Math.sin(r);
-    const Rr: Matrix3x3 = [
-        [1, 0, 0],
-        [0, cr, -sr],
-        [0, sr, cr]
-    ];
-
-    // Multiply matrices: R = Rr * Re * Rh
-    // First multiply Re * Rh
-    const ReRh: Matrix3x3 = multiplyMatrices(Re, Rh);
-    // Then multiply Rr * (Re * Rh)
-    const R: Matrix3x3 = multiplyMatrices(Rr, ReRh);
-
-    return R;
 }
 
 // Handle device orientation event
@@ -198,9 +133,9 @@ function handleOrientation(event: DeviceOrientationEvent): void {
         }
 
         // Update 3D visualizations if they exist
-        if (rawScene && extractedScene) {
+        if (deviceScene && extractedScene) {
             // Update raw device matrix scene
-            rawScene.updateRotation(R);
+            deviceScene.updateRotation(R);
 
             // Build rotation matrix from extracted angles and update extracted angles scene
             const extractedMatrix = buildRotationMatrixFromAngles(angles.heading, angles.elevation, angles.roll);
@@ -256,12 +191,15 @@ function initialize3DScenes(): void {
     const extractedCanvas = document.getElementById('canvas-extracted') as HTMLCanvasElement;
 
     if (rawCanvas && extractedCanvas) {
-        rawScene = new VisualizationScene(rawCanvas);
-        extractedScene = new VisualizationScene(extractedCanvas);
+        // view the sensor scene from a similar perspective the chrome dev tools simulator uses
+        deviceScene = new VisualizationScene(rawCanvas, [0, -5, 0]);
+
+        // view the virtual scene from behind the origin, looking toward it
+        extractedScene = new VisualizationScene(extractedCanvas, [0, 0, 5]);
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            rawScene?.resize();
+            deviceScene?.resize();
             extractedScene?.resize();
         });
     }
@@ -288,14 +226,14 @@ function switchTab(tabName: string): void {
     });
 
     // Initialize 3D scenes when visualization tab is first opened
-    if (tabName === 'visualization' && !rawScene && !extractedScene) {
+    if (tabName === 'visualization' && !deviceScene && !extractedScene) {
         initialize3DScenes();
     }
 
     // Trigger resize when switching to visualization tab
     if (tabName === 'visualization') {
         setTimeout(() => {
-            rawScene?.resize();
+            deviceScene?.resize();
             extractedScene?.resize();
         }, 100);
     }
