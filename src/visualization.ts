@@ -18,12 +18,11 @@ export class VisualizationScene {
     private camera: THREE.PerspectiveCamera;
     private renderer: THREE.WebGLRenderer;
     private cube: THREE.Mesh;
-    private arrowX: THREE.ArrowHelper;
-    private arrowY: THREE.ArrowHelper;
-    private arrowZ: THREE.ArrowHelper;
+    private arrowForward: THREE.ArrowHelper;
+    private arrowRight: THREE.ArrowHelper;
     private group: THREE.Group;
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement, cameraPos: [number, number, number]) {
         // Scene setup
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x1a1a2e);
@@ -36,7 +35,7 @@ export class VisualizationScene {
             1000
         );
         // Position camera directly behind the geometry along +Z axis
-        this.camera.position.set(0, 0, 5);
+        this.camera.position.set(cameraPos[0], cameraPos[1], cameraPos[2]);
         this.camera.lookAt(0, 0, 0);
 
         // Renderer setup
@@ -54,7 +53,7 @@ export class VisualizationScene {
         // Create cube with distinct faces
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const materials = [
-            new THREE.MeshBasicMaterial({ color: 0xff6b6b, wireframe: false }), // right - red
+            new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false }), // right - red
             new THREE.MeshBasicMaterial({ color: 0xff9999, wireframe: false }), // left - light red
             new THREE.MeshBasicMaterial({ color: 0x4ecdc4, wireframe: false }), // top - cyan
             new THREE.MeshBasicMaterial({ color: 0x95e1d3, wireframe: false }), // bottom - light cyan
@@ -71,39 +70,27 @@ export class VisualizationScene {
         
         this.group.add(this.cube);
 
-        // Create axis arrows
-        // X-axis (red) - points to the right in initial orientation
-        this.arrowX = new THREE.ArrowHelper(
+        // create "forward" (north) arrow
+        this.arrowForward = new THREE.ArrowHelper(
+            new THREE.Vector3(0, 0, -1),
+            new THREE.Vector3(0, 0, 0),
+            5,
+            0x3333ff,
+            0.5,
+            0.4
+        );
+        this.group.add(this.arrowForward);
+
+        // create "right" (east) arrow
+        this.arrowRight = new THREE.ArrowHelper(
             new THREE.Vector3(1, 0, 0),
             new THREE.Vector3(0, 0, 0),
-            1.5,
+            5,
             0xff0000,
-            0.3,
-            0.2
+            0.5,
+            0.4
         );
-        this.group.add(this.arrowX);
-
-        // Y-axis (green) - points up in initial orientation
-        this.arrowY = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 1, 0),
-            new THREE.Vector3(0, 0, 0),
-            1.5,
-            0x00ff00,
-            0.3,
-            0.2
-        );
-        this.group.add(this.arrowY);
-
-        // Z-axis (blue) - points toward viewer in initial orientation
-        this.arrowZ = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 0, 1),
-            new THREE.Vector3(0, 0, 0),
-            1.5,
-            0x0000ff,
-            0.3,
-            0.2
-        );
-        this.group.add(this.arrowZ);
+        this.group.add(this.arrowRight);
 
         // Add ambient light for better visibility
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
