@@ -73,7 +73,7 @@ export function buildRotationMatrix(alphaRad: number, betaRad: number, gammaRad:
 
 
 // Build rotation matrix from extracted angles (roll, elevation, heading)
-// Order: R = R(roll) * R(elevation) * R(heading)
+// Order: R = R(heading) * R(elevation) * R(roll)
 // This constructs a rotation matrix from the extracted angles to compare with the raw device matrix
 export function buildRotationMatrixFromAngles(heading: number, elevation: number, roll: number): Matrix3x3 {
 
@@ -110,8 +110,8 @@ export function buildRotationMatrixFromAngles(heading: number, elevation: number
     ];
 
 
-    const RhRe: Matrix3x3 = multiplyMatrices(Rh, Re);
-    const R: Matrix3x3 = multiplyMatrices(RhRe, Rr);
+    const RhRe = multiplyMatrices(Rh, Re);
+    const R = multiplyMatrices(RhRe, Rr);
 
     return R;
 }
