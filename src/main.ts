@@ -59,7 +59,7 @@ interface OrientationData {
 //   - event: DeviceOrientationEvent
 // 
 // Output: {extracted: {heading, elevation, roll}, R, extractedMatrix}
-function calculateOrientationAngles(event: DeviceOrientationEvent): {extracted: OrientationData, R: Matrix3x3, extractedMatrix: Matrix3x3} {
+function calculateOrientationAnglesFromEvent(event: DeviceOrientationEvent): {extracted: OrientationData, R: Matrix3x3, extractedMatrix: Matrix3x3} {
     const alpha = event.alpha ?? 0;
     const beta = event.beta ?? 0;
     const gamma = event.gamma ?? 0;
@@ -73,14 +73,14 @@ function calculateOrientationAngles(event: DeviceOrientationEvent): {extracted: 
     const R = buildRotationMatrix(alphaRad, betaRad, gammaRad);
 
     // Transform vectors once
-    const northVector = multiplyMatrixVector(R, [0, 0, -1]);
-    const eastVector = multiplyMatrixVector(R, [1, 0, 0]);
+    const forwardVector = multiplyMatrixVector(R, [0, 0, -1]);
+    const rightVector = multiplyMatrixVector(R, [1, 0, 0]);
 
     // === HEADING (from north vector) ===
     // Project north vector onto horizontal plane (x-y plane)
     // Heading = atan2(x, y) gives compass direction
-    const headingX = northVector[0];
-    const headingY = northVector[1];
+    const headingX = forwardVector[0];
+    const headingY = forwardVector[1];
     let heading = Math.atan2(headingX, headingY) * (180 / Math.PI);
     if (heading < 0) {
         heading += 360;
@@ -89,15 +89,15 @@ function calculateOrientationAngles(event: DeviceOrientationEvent): {extracted: 
     // === ELEVATION (from north vector) ===
     // Elevation is the angle from the horizontal plane
     // Use the magnitude of horizontal components as the "adjacent" side
-    const elevationZ = northVector[2];
-    const horizontalDist = Math.sqrt(northVector[0] ** 2 + northVector[1] ** 2);
+    const elevationZ = forwardVector[2];
+    const horizontalDist = Math.sqrt(forwardVector[0] ** 2 + forwardVector[1] ** 2);
     const elevation = Math.atan2(elevationZ, horizontalDist) * (180 / Math.PI);
 
     // === ROLL (from east vector) ===
     // Roll is the bank angle around the forward axis (pitch axis)
     // The horizontal distance of the east vector tells us the bank angle
-    const rollZ = eastVector[2];
-    const rollHorizontalDist = Math.sqrt(eastVector[0] ** 2 + eastVector[1] ** 2);
+    const rollZ = rightVector[2];
+    const rollHorizontalDist = Math.sqrt(rightVector[0] ** 2 + rightVector[1] ** 2);
     const roll = Math.atan2(-rollZ, rollHorizontalDist) * (180 / Math.PI);
 
     // Normalize heading to [-180, +180] range
@@ -123,7 +123,7 @@ function handleOrientation(event: DeviceOrientationEvent): void {
     gammaElement.textContent = formatValue(gamma);
 
     // Calculate angles from transformed vectors using unified function
-    const {extracted: angles, R, extractedMatrix} = calculateOrientationAngles(event);
+    const {extracted: angles, R, extractedMatrix} = calculateOrientationAnglesFromEvent(event);
 
     if (!isNaN(angles.normalizedHeading)) {
         headingElement.textContent = formatValue(angles.normalizedHeading) + '°';
