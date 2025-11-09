@@ -1,3 +1,6 @@
+# mkcert
+dev-certs/
+
 # Logs
 logs
 *.log
