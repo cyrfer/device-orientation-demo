@@ -78,7 +78,7 @@ npm run type-check
 5. **3D View Tab** shows:
    - Two synchronized 3D viewports with a colored cube and axis arrows (X=red, Y=green, Z=blue)
    - Left viewport: Rotated using the raw device orientation rotation matrix
-   - Right viewport: Rotated using a matrix built from extracted angles (R = R(roll) × R(elevation) × R(heading))
+   - Right viewport: Rotated using a matrix built from extracted angles (R = R(heading) × R(elevation) × R(roll))
    - Compare both visualizations to verify that the angle extraction preserves the rotation accurately across Android and iOS
 
 ## Browser Compatibility
