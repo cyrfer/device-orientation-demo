@@ -27,7 +27,18 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    https: true,
+    https: (() => {
+      const keyPath = path.join(devCertDir, 'dev-key.pem')
+      const certPath = path.join(devCertDir, 'dev-cert.pem')
+      if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        return {
+          key: fs.readFileSync(keyPath),
+          cert: fs.readFileSync(certPath)
+        } as import('https').ServerOptions
+      }
+      // mkcert plugin may generate files at runtime; fallback to true and cast
+      return true as unknown as import('https').ServerOptions
+    })(),
     open: true
   }
 })
