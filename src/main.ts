@@ -13,6 +13,9 @@ const headingElement = document.getElementById('heading')!;
 const elevationElement = document.getElementById('elevation')!;
 const rollElement = document.getElementById('roll')!;
 const directionElement = document.getElementById('direction')!;
+const screenOrientationTypeElement = document.getElementById('screen-orientation-type')!;
+const screenOrientationAngleElement = document.getElementById('screen-orientation-angle')!;
+const deviceOrientationAbsoluteElement = document.getElementById('device-orientation-absolute')!;
 const requestButton = document.getElementById('requestButton')!;
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -122,6 +125,9 @@ function handleOrientation(event: DeviceOrientationEvent): void {
     betaElement.textContent = formatValue(beta);
     gammaElement.textContent = formatValue(gamma);
 
+    // Update absolute indicator
+    deviceOrientationAbsoluteElement.textContent = event.absolute ? 'true' : 'false';
+
     // Calculate angles from transformed vectors using unified function
     const {extracted: angles, R, extractedMatrix} = calculateOrientationAnglesFromEvent(event);
 
@@ -185,6 +191,17 @@ async function requestPermission(): Promise<void> {
     }
 }
 
+// Update screen orientation display
+function updateScreenOrientation(): void {
+    if (screen.orientation) {
+        screenOrientationTypeElement.textContent = screen.orientation.type || '--';
+        screenOrientationAngleElement.textContent = screen.orientation.angle.toString();
+    } else {
+        screenOrientationTypeElement.textContent = 'N/A';
+        screenOrientationAngleElement.textContent = '--';
+    }
+}
+
 // Start listening to device orientation
 function startListening(): void {
     if (typeof DeviceOrientationEvent === 'undefined') {
@@ -193,6 +210,14 @@ function startListening(): void {
     }
 
     window.addEventListener('deviceorientation', handleOrientation);
+    
+    // Listen for screen orientation changes
+    if (screen.orientation) {
+        screen.orientation.addEventListener('change', updateScreenOrientation);
+        // Initialize screen orientation display
+        updateScreenOrientation();
+    }
+    
     requestButton.style.display = 'none';
 }
 

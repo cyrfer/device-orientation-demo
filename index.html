@@ -241,38 +241,65 @@
         <!-- Tab 1: Data View (Current UI) -->
         <div class="tab-content active" id="tab-data">
         
-        <!-- Main outputs: Heading, Elevation, Roll -->
-        <div class="card compass">
-            <div class="data-label">Compass Heading</div>
-            <div class="compass-heading" id="heading">--</div>
-            <div class="compass-direction" id="direction">--</div>
+        <!-- Card 1: Screen Orientation -->
+        <div class="card" style="padding: 15px;">
+            <div class="data-label" style="font-size: 11px; margin-bottom: 5px;">Screen Orientation</div>
+            <div style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
+                    <div style="color: #999; font-size: 10px;">Type</div>
+                    <div id="screen-orientation-type" style="font-weight: 600; font-size: 14px;">--</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="color: #999; font-size: 10px;">Angle</div>
+                    <div style="font-weight: 600; font-size: 14px;"><span id="screen-orientation-angle">--</span>°</div>
+                </div>
+            </div>
         </div>
 
-        <div class="card compass">
-            <div class="data-label">Elevation</div>
-            <div class="compass-heading" id="elevation">--</div>
+        <!-- Card 2: Extracted Angles (Heading, Elevation, Roll) -->
+        <div class="card" style="padding: 15px;">
+            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <div class="data-label" style="font-size: 11px; margin-bottom: 3px;">Compass Heading</div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <div style="font-size: 28px; font-weight: 700; color: #667eea;"><span id="heading">--</span></div>
+                        <div style="font-size: 16px; font-weight: 600; color: #764ba2;" id="direction">--</div>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <div class="data-label" style="font-size: 11px; margin-bottom: 3px;">Absolute</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #333;" id="device-orientation-absolute">--</div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid #e0e0e0; padding-top: 10px;">
+                <div style="display: flex; gap: 15px;">
+                    <div style="flex: 1;">
+                        <div class="data-label" style="font-size: 11px; margin-bottom: 3px;">Elevation</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #667eea;" id="elevation">--</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="data-label" style="font-size: 11px; margin-bottom: 3px;">Roll</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #667eea;" id="roll">--</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="card compass">
-            <div class="data-label">Roll</div>
-            <div class="compass-heading" id="roll">--</div>
-        </div>
-
-        <!-- Raw device orientation values (smaller) -->
-        <div class="card raw-data">
-            <div class="data-label" style="font-size: 12px; margin-bottom: 10px;">Raw Device Orientation</div>
-            <div style="display: flex; justify-content: space-around; font-size: 12px;">
-                <div>
+        <!-- Card 3: Raw Device Orientation -->
+        <div class="card" style="padding: 15px;">
+            <div class="data-label" style="font-size: 11px; margin-bottom: 8px;">Raw Device Orientation</div>
+            <div style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
                     <div style="color: #999; font-size: 10px;">Alpha</div>
-                    <div><span id="alpha">--</span>°</div>
+                    <div style="font-weight: 600; font-size: 16px;"><span id="alpha">--</span>°</div>
                 </div>
-                <div>
+                <div style="flex: 1;">
                     <div style="color: #999; font-size: 10px;">Beta</div>
-                    <div><span id="beta">--</span>°</div>
+                    <div style="font-weight: 600; font-size: 16px;"><span id="beta">--</span>°</div>
                 </div>
-                <div>
+                <div style="flex: 1;">
                     <div style="color: #999; font-size: 10px;">Gamma</div>
-                    <div><span id="gamma">--</span>°</div>
+                    <div style="font-weight: 600; font-size: 16px;"><span id="gamma">--</span>°</div>
                 </div>
             </div>
         </div>
